@@ -1,0 +1,215 @@
+{
+  "entities": {
+    "SiteConfig": {
+      "title": "SiteConfig",
+      "description": "Global storefront visual configuration including Hero image and seeding status.",
+      "type": "object",
+      "properties": {
+        "heroImageUrl": {
+          "type": "string",
+          "maxLength": 2048,
+          "description": "External or local URL for the hero sanctuary image. Empty string means hidden/deleted."
+        },
+        "heroImageAlt": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "heroImageCaption": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "catalogSeeded": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["heroImageUrl", "heroImageAlt", "heroImageCaption", "catalogSeeded", "updatedAt"]
+    },
+    "CategoryCover": {
+      "title": "CategoryCover",
+      "description": "Optional cover image override for each service category card on the landing page.",
+      "type": "object",
+      "properties": {
+        "categoryId": {
+          "type": "string",
+          "enum": [
+            "massages",
+            "combos",
+            "promos",
+            "wet-area",
+            "acupuncture",
+            "waxing",
+            "home-service"
+          ]
+        },
+        "imageUrl": {
+          "type": "string",
+          "maxLength": 2048,
+          "description": "External or local image URL. Empty string deletes/hides the cover image."
+        },
+        "imageAlt": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["categoryId", "imageUrl", "imageAlt", "updatedAt"]
+    },
+    "CatalogService": {
+      "title": "CatalogService",
+      "description": "Editable service, promo package, or outcall radius tier across all spa categories.",
+      "type": "object",
+      "properties": {
+        "categoryId": {
+          "type": "string",
+          "enum": [
+            "massages",
+            "combos",
+            "promos",
+            "wet-area",
+            "acupuncture",
+            "waxing",
+            "home-service",
+            "exclusive"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "tagalogSubtitle": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "price": {
+          "type": "number"
+        },
+        "durationMinutes": {
+          "type": "number"
+        },
+        "durationLabel": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "includes": {
+          "type": "array"
+        },
+        "hasUnlimitedWetArea": {
+          "type": "boolean"
+        },
+        "addOnATitle": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "addOnAOptions": {
+          "type": "array"
+        },
+        "addOnBTitle": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "addOnBOptions": {
+          "type": "array"
+        },
+        "homeRates": {
+          "type": "array"
+        },
+        "sortOrder": {
+          "type": "number"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "categoryId",
+        "name",
+        "price",
+        "durationMinutes",
+        "durationLabel",
+        "description",
+        "sortOrder",
+        "updatedAt"
+      ]
+    },
+    "SpaGalleryPhoto": {
+      "title": "SpaGalleryPhoto",
+      "description": "Inside the Spa showcase photo with external image URL, title, and short caption.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "caption": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "imageUrl": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "sortOrder": {
+          "type": "number"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["title", "caption", "imageUrl", "sortOrder", "updatedAt"]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Optional explicit admin UID grant document.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "maxLength": 254
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["email", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/siteConfig/{configId}": {
+      "schema": { "$ref": "#/entities/SiteConfig" },
+      "description": "Global site settings document (single doc ID 'main')."
+    },
+    "/categoryCovers/{categoryId}": {
+      "schema": { "$ref": "#/entities/CategoryCover" },
+      "description": "Cover photo overrides keyed by categoryId."
+    },
+    "/services/{serviceId}": {
+      "schema": { "$ref": "#/entities/CatalogService" },
+      "description": "All menu treatments, promo bundles, and home/hotel radius tiers."
+    },
+    "/spaGallery/{photoId}": {
+      "schema": { "$ref": "#/entities/SpaGalleryPhoto" },
+      "description": "Inside the Spa gallery items showcased on the home page."
+    },
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Explicit admin UID registry (read-restricted to owner/admin)."
+    }
+  }
+}

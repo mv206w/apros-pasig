@@ -1,0 +1,213 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        request.auth.token.email == 'melmarvelasco@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidCategoryId(cat) {
+      return cat is string && cat in [
+        'massages',
+        'combos',
+        'promos',
+        'wet-area',
+        'acupuncture',
+        'waxing',
+        'home-service'
+      ];
+    }
+
+    function isValidServiceCategoryId(cat) {
+      return isValidCategoryId(cat) || cat == 'exclusive';
+    }
+
+    function isValidBoundedStringList(arr, maxItems) {
+      return arr is list && arr.size() <= maxItems && (arr.size() == 0 || arr[0] is string);
+    }
+
+    function isValidBoundedMapList(arr, maxItems) {
+      return arr is list && arr.size() <= maxItems && (arr.size() == 0 || arr[0] is map);
+    }
+
+    function isValidSiteConfig(data) {
+      return data.keys().hasAll([
+          'heroImageUrl',
+          'heroImageAlt',
+          'heroImageCaption',
+          'catalogSeeded',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'heroImageUrl',
+          'heroImageAlt',
+          'heroImageCaption',
+          'catalogSeeded',
+          'updatedAt'
+        ]) &&
+        data.heroImageUrl is string && data.heroImageUrl.size() <= 2048 &&
+        data.heroImageAlt is string && data.heroImageAlt.size() <= 300 &&
+        data.heroImageCaption is string && data.heroImageCaption.size() <= 300 &&
+        data.catalogSeeded is bool &&
+        data.updatedAt is timestamp &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidCategoryCover(data, categoryId) {
+      return data.keys().hasAll(['categoryId', 'imageUrl', 'imageAlt', 'updatedAt']) &&
+        data.keys().hasOnly(['categoryId', 'imageUrl', 'imageAlt', 'updatedAt']) &&
+        data.categoryId == categoryId &&
+        isValidCategoryId(data.categoryId) &&
+        data.imageUrl is string && data.imageUrl.size() <= 2048 &&
+        data.imageAlt is string && data.imageAlt.size() <= 300 &&
+        data.updatedAt is timestamp &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidCatalogService(data) {
+      return data.keys().hasAll([
+          'categoryId',
+          'name',
+          'price',
+          'durationMinutes',
+          'durationLabel',
+          'description',
+          'sortOrder',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'categoryId',
+          'name',
+          'tagalogSubtitle',
+          'price',
+          'durationMinutes',
+          'durationLabel',
+          'description',
+          'includes',
+          'hasUnlimitedWetArea',
+          'addOnATitle',
+          'addOnAOptions',
+          'addOnBTitle',
+          'addOnBOptions',
+          'homeRates',
+          'sortOrder',
+          'updatedAt'
+        ]) &&
+        isValidServiceCategoryId(data.categoryId) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 160 &&
+        (!('tagalogSubtitle' in data) || (data.tagalogSubtitle is string && data.tagalogSubtitle.size() <= 160)) &&
+        data.price is number && data.price >= 0 && data.price <= 1000000 &&
+        data.durationMinutes is number && data.durationMinutes >= 0 && data.durationMinutes <= 1440 &&
+        data.durationLabel is string && data.durationLabel.size() <= 120 &&
+        data.description is string && data.description.size() <= 600 &&
+        (!('includes' in data) || isValidBoundedStringList(data.includes, 10)) &&
+        (!('hasUnlimitedWetArea' in data) || data.hasUnlimitedWetArea is bool) &&
+        (!('addOnATitle' in data) || (data.addOnATitle is string && data.addOnATitle.size() <= 120)) &&
+        (!('addOnAOptions' in data) || isValidBoundedMapList(data.addOnAOptions, 10)) &&
+        (!('addOnBTitle' in data) || (data.addOnBTitle is string && data.addOnBTitle.size() <= 120)) &&
+        (!('addOnBOptions' in data) || isValidBoundedMapList(data.addOnBOptions, 10)) &&
+        (!('homeRates' in data) || isValidBoundedMapList(data.homeRates, 6)) &&
+        data.sortOrder is number && data.sortOrder >= 0 && data.sortOrder <= 10000 &&
+        data.updatedAt is timestamp &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidSpaGalleryPhoto(data) {
+      return data.keys().hasAll(['title', 'caption', 'imageUrl', 'sortOrder', 'updatedAt']) &&
+        data.keys().hasOnly(['title', 'caption', 'imageUrl', 'sortOrder', 'updatedAt']) &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
+        data.caption is string && data.caption.size() <= 240 &&
+        data.imageUrl is string && data.imageUrl.size() >= 1 && data.imageUrl.size() <= 2048 &&
+        data.sortOrder is number && data.sortOrder >= 0 && data.sortOrder <= 1000 &&
+        data.updatedAt is timestamp &&
+        data.updatedAt == request.time;
+    }
+
+    match /siteConfig/{configId} {
+      allow get: if configId == 'main';
+      allow list: if false;
+      allow create, update: if configId == 'main' && isAdmin() && isValidSiteConfig(incoming());
+      allow delete: if false;
+    }
+
+    match /categoryCovers/{categoryId} {
+      allow get: if isValidCategoryId(categoryId);
+      allow list: if true;
+      allow create: if isValidId(categoryId) && isValidCategoryId(categoryId) && isAdmin() && isValidCategoryCover(incoming(), categoryId);
+      allow update: if isValidId(categoryId) && isValidCategoryId(categoryId) && isAdmin() && isValidCategoryCover(incoming(), categoryId) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['categoryId', 'imageUrl', 'imageAlt', 'updatedAt']);
+      allow delete: if isValidId(categoryId) && isValidCategoryId(categoryId) && isAdmin();
+    }
+
+    match /services/{serviceId} {
+      allow get: if isValidId(serviceId);
+      allow list: if true;
+      allow create: if isValidId(serviceId) && isAdmin() && isValidCatalogService(incoming());
+      allow update: if isValidId(serviceId) && isAdmin() && isValidCatalogService(incoming()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'categoryId',
+          'name',
+          'tagalogSubtitle',
+          'price',
+          'durationMinutes',
+          'durationLabel',
+          'description',
+          'includes',
+          'hasUnlimitedWetArea',
+          'addOnATitle',
+          'addOnAOptions',
+          'addOnBTitle',
+          'addOnBOptions',
+          'homeRates',
+          'sortOrder',
+          'updatedAt'
+        ]);
+      allow delete: if isValidId(serviceId) && isAdmin();
+    }
+
+    match /spaGallery/{photoId} {
+      allow get: if isValidId(photoId);
+      allow list: if true;
+      allow create: if isValidId(photoId) && isAdmin() && isValidSpaGalleryPhoto(incoming());
+      allow update: if isValidId(photoId) && isAdmin() && isValidSpaGalleryPhoto(incoming()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['title', 'caption', 'imageUrl', 'sortOrder', 'updatedAt']);
+      allow delete: if isValidId(photoId) && isAdmin();
+    }
+
+    match /admins/{userId} {
+      allow get: if isValidId(userId) && isVerifiedUser() && request.auth.uid == userId;
+      allow list, create, update, delete: if false;
+    }
+
+    match /test/connection {
+      allow get: if true;
+    }
+  }
+}

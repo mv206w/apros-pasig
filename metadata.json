@@ -1,0 +1,6 @@
+{
+  "name": "Apros Wellness Spa — Pasig City",
+  "description": "Authentic Filipino massage, traditional Hilot, ventosa, hammam, and holistic bodywork sanctuary in Dela Paz, Pasig City.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
